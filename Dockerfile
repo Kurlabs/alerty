@@ -11,15 +11,18 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o bin/websites-cron cmd/websites-cron/run.go
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o bin/sockets-cron cmd/sockets-cron/run.go
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o bin/robots-cron cmd/robots-cron/run.go
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o bin/brain cmd/brain/brain.go
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o bin/controller cmd/controller/controller.go
+RUN touch .env
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/websites-cron cmd/websites-cron/run.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/sockets-cron cmd/sockets-cron/run.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/robots-cron cmd/robots-cron/run.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/brain cmd/brain/brain.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/controller cmd/controller/controller.go
 
 # Final stage
-FROM scratch
+FROM golang:1.13-alpine
 
 COPY --from=builder /app/bin /usr/bin
+COPY --from=builder /app/.env /app/.env
 
 WORKDIR /app
