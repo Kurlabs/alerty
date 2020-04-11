@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -59,12 +59,12 @@ func main() {
 
 	walkFunc := func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
 		route = strings.Replace(route, "/*/", "/", -1)
-		fmt.Printf("%s %s\n", method, route)
+		log.Printf("%s %s\n", method, route)
 		return nil
 	}
 
 	if err := chi.Walk(r, walkFunc); err != nil {
-		fmt.Printf("Logging err: %s\n", err.Error())
+		log.Printf("Logging err: %s\n", err.Error())
 	}
 
 	http.ListenAndServe(":3000", r)
@@ -75,7 +75,7 @@ func updateBatch(msgs []RunnerStatus) {
 	var controlled bool
 	for _, msg := range msgs {
 		filter := bson.D{{"_id", msg.ID}}
-		fmt.Printf("URL: %s ", msg.URL)
+		log.Printf("URL: %s ", msg.URL)
 		if msg.Response != msg.LastResponse {
 			controlled = false
 			update := bson.D{
@@ -147,13 +147,13 @@ func Batch(w http.ResponseWriter, r *http.Request) {
 func updateBatchRobot(msgs []RobotResponse) {
 	for _, msg := range msgs {
 		filter := bson.D{{"_id", msg.ID}}
-		fmt.Printf("ID: %s ", msg.ID)
+		log.Printf("ID: %s ", msg.ID)
 		update := bson.D{
 			{"$set", bson.D{
 				{"robot_result", msg.RobotResult},
 			}},
 		}
-		fmt.Printf("URL: %s ", msg.URL)
+		log.Printf("URL: %s ", msg.URL)
 		conn.Update(collection, &filter, &update)
 	}
 }

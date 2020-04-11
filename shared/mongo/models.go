@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
@@ -28,7 +27,7 @@ func Connect(DBName, dbHost, dbPort string) *mongo.Client {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Connected to MongoDB!")
+	log.Println("Connected to MongoDB!")
 	return dbClient
 }
 
@@ -38,7 +37,7 @@ func Find(collection *mongo.Collection, filter *bson.M) *mongo.Cursor {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// fmt.Println("Found documents ", cur)
+	// log.Println("Found documents ", cur)
 	return cur
 }
 
@@ -51,7 +50,7 @@ func Update(collection *mongo.Collection, filter *bson.D, update *bson.D) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
+	log.Printf("Matched %v documents and updated %v documents.\n", updateResult.MatchedCount, updateResult.ModifiedCount)
 }
 
 func Insert(collection *mongo.Collection, doc interface{}) {
@@ -59,7 +58,7 @@ func Insert(collection *mongo.Collection, doc interface{}) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Inserted a single document: ", insertResult.InsertedID)
+	log.Println("Inserted a single document: ", insertResult.InsertedID)
 }
 
 func InsertMany(collection *mongo.Collection, docs []interface{}) {
@@ -67,7 +66,7 @@ func InsertMany(collection *mongo.Collection, docs []interface{}) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Inserted multiple documents: ", insertManyResult.InsertedIDs)
+	log.Println("Inserted multiple documents: ", insertManyResult.InsertedIDs)
 }
 
 func Close(dbClient *mongo.Client) {
@@ -76,7 +75,7 @@ func Close(dbClient *mongo.Client) {
 	if err != nil {
 		log.Fatal(err)
 	} else {
-		fmt.Println("Connection to MongoDB closed.")
+		log.Println("Connection to MongoDB closed.")
 	}
 }
 
