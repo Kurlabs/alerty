@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -89,7 +88,7 @@ func CheckUrl(ctx context.Context, m PubSubMessage) error {
 
 	// Make json string
 	result := responsesJSON(responses)
-	fmt.Println("JSON: ", string(result))
+	log.Println("JSON: ", string(result))
 	// Send to API
 	if brainURL != "" {
 		// Create request object.

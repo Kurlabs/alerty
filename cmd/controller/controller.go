@@ -11,6 +11,7 @@ import (
 	"time"
 
 	check "github.com/Kurlabs/alerty/internal/check"
+	event "github.com/Kurlabs/alerty/internal/event"
 	"github.com/Kurlabs/alerty/shared/env"
 	conn "github.com/Kurlabs/alerty/shared/mongo"
 	message "github.com/Kurlabs/alerty/shared/pubsub"
@@ -45,12 +46,12 @@ var pbClient *pubsub.Client
 
 // ChannelsList contains Contacts array field to handle json parsing
 type ChannelsList struct {
-	EmailContacts     []check.Contact
-	PhoneContacts     []check.Contact
-	SlackIntegrations []check.Integration
+	EmailContacts     []event.Contact
+	PhoneContacts     []event.Contact
+	SlackIntegrations []event.Integration
 }
 
-func sendMessage(eventType string, monitor check.Monitor, sms, email, slack bool, emailContacts, phoneContacts []check.Contact, slackIntegrations []check.Integration) {
+func sendMessage(eventType string, monitor check.Monitor, sms, email, slack bool, emailContacts, phoneContacts []event.Contact, slackIntegrations []event.Integration) {
 	log.Println(monitor.Name, ": Sending pubsub message!")
 	objectTypes := map[string]string{
 		WEBSITEMONITOR: "website",
@@ -90,14 +91,14 @@ func addMessagesEntries(client *mongo.Client, messages []interface{}) {
 	)
 }
 
-func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, event check.Event, wg *sync.WaitGroup) {
+func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, eventH event.Event, wg *sync.WaitGroup) {
 	log.Println(monitor.Name, ": Handling", eventType, "event")
-	var emailContacts []check.Contact
-	var phoneContacts []check.Contact
-	var slackIntegrations []check.Integration
+	var emailContacts []event.Contact
+	var phoneContacts []event.Contact
+	var slackIntegrations []event.Integration
 	var level string
 	sms, email, slack := false, false, false
-	messages := make([]interface{}, len(event.Contacts)+len(event.Integrations))
+	messages := make([]interface{}, len(eventH.Contacts)+len(eventH.Integrations))
 	monitorName := monitor.Name
 	monitorURL := monitor.URL
 	monitorPath := monitor.Path
@@ -112,9 +113,9 @@ func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, 
 		level = DONE
 	}
 
-	for index, contact := range event.Contacts {
-		var cntct check.Contact
-		var cntctParent check.Contact
+	for index, contact := range eventH.Contacts {
+		var cntct event.Contact
+		var cntctParent event.Contact
 		var mtype string
 
 		err := conn.FindOne(
@@ -162,8 +163,8 @@ func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, 
 		}
 	}
 
-	for index, integration := range event.Integrations {
-		var intgr check.Integration
+	for index, integration := range eventH.Integrations {
+		var intgr event.Integration
 		mtype := SLACK
 		err := conn.FindOne(
 			conn.GetCollection(client, env.Config.DBName, "integrations"),
@@ -178,7 +179,7 @@ func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, 
 				slack = true
 			}
 		}
-		messages[len(event.Contacts)+index] = bson.M{
+		messages[len(eventH.Contacts)+index] = bson.M{
 			"sent":             true,
 			"message_type":     mtype,
 			"level":            level,
@@ -198,10 +199,10 @@ func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, 
 	wg.Done()
 }
 
-func checkEvent(client *mongo.Client, event check.Event, monitor check.Monitor, wg *sync.WaitGroup) {
+func checkEvent(client *mongo.Client, eventC event.Event, monitor check.Monitor, wg *sync.WaitGroup) {
 	var wgRules sync.WaitGroup
-	for _, rule := range event.Rules {
-		var metric check.Metric
+	for _, rule := range eventC.Rules {
+		var metric event.Metric
 		err := conn.FindOne(
 			conn.GetCollection(client, env.Config.DBName, "metrics"),
 			&bson.M{"_id": rule.Metric},
@@ -218,12 +219,12 @@ func checkEvent(client *mongo.Client, event check.Event, monitor check.Monitor, 
 			case GTE:
 				if monitor.Response >= value {
 					wgRules.Add(1)
-					handleEvent(client, DOWNTIME, monitor, event, &wgRules)
+					handleEvent(client, DOWNTIME, monitor, eventC, &wgRules)
 				}
 			case LT:
 				if monitor.Response < value {
 					wgRules.Add(1)
-					handleEvent(client, UPTIME, monitor, event, &wgRules)
+					handleEvent(client, UPTIME, monitor, eventC, &wgRules)
 				}
 			}
 		}
@@ -240,7 +241,7 @@ func checkMonitor(client *mongo.Client, mntrColl *mongo.Collection, monitor chec
 		evtCur := conn.Find(evtColl, &bson.M{"monitor": monitor.ID})
 		var wgEvents sync.WaitGroup
 		for evtCur.Next(context.TODO()) {
-			var event check.Event
+			var event event.Event
 			err := evtCur.Decode(&event)
 			if err != nil {
 				log.Fatal(err)
