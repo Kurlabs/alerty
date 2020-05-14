@@ -194,7 +194,9 @@ func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, 
 		}
 	}
 	sendMessage(eventType, monitor, sms, email, slack, emailContacts, phoneContacts, slackIntegrations)
-	addMessagesEntries(client, messages)
+	if len(messages) > 0 {
+		addMessagesEntries(client, messages)
+	}
 	log.Println(monitor.Name, ":", eventType, "event handled!")
 	wg.Done()
 }
