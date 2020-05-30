@@ -2,7 +2,6 @@ package inmongo
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/Kurlabs/alerty/internal/check"
@@ -11,14 +10,7 @@ import (
 )
 
 func TestNewMonitor(t *testing.T) {
-	DBName := "alerty"
-	monitorsCollection := "monitors"
-	mongoHost := "localhost"
-	if mh := os.Getenv("MONGO_HOST"); mh != "" {
-		mongoHost = mh
-	}
-	client := models.Connect(DBName, mongoHost, "27017")
-	collection := models.GetCollection(client, DBName, monitorsCollection)
+	collection := models.MCollection()
 	checkRepo := NewMonitorsRepository(collection)
 
 	website, err := check.New("Alerty", "https://alerty.online", 10, 1)
@@ -31,7 +23,7 @@ func TestNewMonitor(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 
-	website2, err := checkRepo.Get(website.ID.Hex())
+	website2, err := checkRepo.GetByID(website.ID.Hex())
 	if err != nil {
 		t.Logf("%v", website2)
 		t.Errorf("%v", err)
@@ -50,14 +42,7 @@ func TestNewMonitor(t *testing.T) {
 }
 
 func TestFindAll(t *testing.T) {
-	DBName := "alerty"
-	monitorsCollection := "monitors"
-	mongoHost := "localhost"
-	if mh := os.Getenv("MONGO_HOST"); mh != "" {
-		mongoHost = mh
-	}
-	client := models.Connect(DBName, mongoHost, "27017")
-	collection := models.GetCollection(client, DBName, monitorsCollection)
+	collection := models.MCollection()
 	checkRepo := NewMonitorsRepository(collection)
 
 	cur, err := checkRepo.Find(&bson.M{})

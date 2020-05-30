@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"os"
 	"time"
 
 	models "github.com/Kurlabs/alerty/shared/mongo"
@@ -125,14 +124,7 @@ func buildEvents(monitor interface{}) bson.M {
 
 func main() {
 	initRandom()
-	DBName := "alerty"
-	monitorsCollection := "monitors"
-	mongoHost := "localhost"
-	if mh := os.Getenv("MONGO_HOST"); mh != "" {
-		mongoHost = mh
-	}
-	client := models.Connect(DBName, mongoHost, "27017")
-	collection := models.GetCollection(client, DBName, monitorsCollection)
+	collection := models.MCollection()
 	monitors := make([]interface{}, monitorsCount)
 	for i := 1; i <= monitorsCount; i++ {
 		option := boolArray[getRandomIndex(2)]
@@ -145,9 +137,8 @@ func main() {
 		}
 		monitors[i-1] = monitor
 		event := buildEvents(monitor)
-		evtColl := models.GetCollection(client, DBName, "events")
+		evtColl := models.ECollection()
 		models.Insert(evtColl, event)
 	}
 	models.InsertMany(collection, monitors)
-	models.Close(client)
 }

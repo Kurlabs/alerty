@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/Kurlabs/alerty/shared/env"
@@ -36,12 +35,7 @@ type RobotResponse struct {
 }
 
 func main() {
-	mongoHost := "localhost"
-	if mh := os.Getenv("MONGO_HOST"); mh != "" {
-		mongoHost = mh
-	}
-	dbclient := conn.Connect(env.Config.DBName, mongoHost, env.Config.MongoPort)
-	collection = conn.GetCollection(dbclient, env.Config.DBName, env.Config.MonitorCollection)
+	collection = conn.MCollection()
 
 	// Define routers
 	r := chi.NewRouter()

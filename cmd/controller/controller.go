@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,7 +11,6 @@ import (
 
 	check "github.com/Kurlabs/alerty/internal/check"
 	event "github.com/Kurlabs/alerty/internal/event"
-	"github.com/Kurlabs/alerty/shared/env"
 	conn "github.com/Kurlabs/alerty/shared/mongo"
 	message "github.com/Kurlabs/alerty/shared/pubsub"
 
@@ -84,14 +82,14 @@ func sendMessage(eventType string, monitor check.Monitor, sms, email, slack bool
 	log.Println(monitor.Name, ": Pubsub message sent!")
 }
 
-func addMessagesEntries(client *mongo.Client, messages []interface{}) {
+func addMessagesEntries(messages []interface{}) {
 	conn.InsertMany(
-		conn.GetCollection(client, env.Config.DBName, "messages"),
+		conn.MSCollection(),
 		messages,
 	)
 }
 
-func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, eventH event.Event, wg *sync.WaitGroup) {
+func handleEvent(eventType string, monitor check.Monitor, eventH event.Event, wg *sync.WaitGroup) {
 	log.Println(monitor.Name, ": Handling", eventType, "event")
 	var emailContacts []event.Contact
 	var phoneContacts []event.Contact
@@ -119,14 +117,14 @@ func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, 
 		var mtype string
 
 		err := conn.FindOne(
-			conn.GetCollection(client, env.Config.DBName, "contacts"),
+			conn.CCollection(),
 			&bson.M{"_id": contact},
 		).Decode(&cntct)
 		if err != nil {
 			log.Fatal(err)
 		}
 		err = conn.FindOne(
-			conn.GetCollection(client, env.Config.DBName, "contacts"),
+			conn.CCollection(),
 			&bson.M{"_id": cntct.ContactParent},
 		).Decode(&cntctParent)
 		if err != nil {
@@ -167,7 +165,7 @@ func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, 
 		var intgr event.Integration
 		mtype := SLACK
 		err := conn.FindOne(
-			conn.GetCollection(client, env.Config.DBName, "integrations"),
+			conn.ICollection(),
 			&bson.M{"_id": integration},
 		).Decode(&intgr)
 		if err != nil {
@@ -195,18 +193,18 @@ func handleEvent(client *mongo.Client, eventType string, monitor check.Monitor, 
 	}
 	sendMessage(eventType, monitor, sms, email, slack, emailContacts, phoneContacts, slackIntegrations)
 	if len(messages) > 0 {
-		addMessagesEntries(client, messages)
+		addMessagesEntries(messages)
 	}
 	log.Println(monitor.Name, ":", eventType, "event handled!")
 	wg.Done()
 }
 
-func checkEvent(client *mongo.Client, eventC event.Event, monitor check.Monitor, wg *sync.WaitGroup) {
+func checkEvent(eventC event.Event, monitor check.Monitor, wg *sync.WaitGroup) {
 	var wgRules sync.WaitGroup
 	for _, rule := range eventC.Rules {
 		var metric event.Metric
 		err := conn.FindOne(
-			conn.GetCollection(client, env.Config.DBName, "metrics"),
+			conn.MTCollection(),
 			&bson.M{"_id": rule.Metric},
 		).Decode(&metric)
 		if err != nil {
@@ -221,12 +219,12 @@ func checkEvent(client *mongo.Client, eventC event.Event, monitor check.Monitor,
 			case GTE:
 				if monitor.Response >= value {
 					wgRules.Add(1)
-					handleEvent(client, DOWNTIME, monitor, eventC, &wgRules)
+					handleEvent(DOWNTIME, monitor, eventC, &wgRules)
 				}
 			case LT:
 				if monitor.Response < value {
 					wgRules.Add(1)
-					handleEvent(client, UPTIME, monitor, eventC, &wgRules)
+					handleEvent(UPTIME, monitor, eventC, &wgRules)
 				}
 			}
 		}
@@ -235,11 +233,11 @@ func checkEvent(client *mongo.Client, eventC event.Event, monitor check.Monitor,
 	wg.Done()
 }
 
-func checkMonitor(client *mongo.Client, mntrColl *mongo.Collection, monitor check.Monitor, wg *sync.WaitGroup) {
+func checkMonitor(mntrColl *mongo.Collection, monitor check.Monitor, wg *sync.WaitGroup) {
 	log.Println(monitor.Name, ": Processing!")
 	if monitor.Response != 0 {
 		log.Println(monitor.Name, ": Checking events")
-		evtColl := conn.GetCollection(client, env.Config.DBName, "events")
+		evtColl := conn.ECollection()
 		evtCur := conn.Find(evtColl, &bson.M{"monitor": monitor.ID})
 		var wgEvents sync.WaitGroup
 		for evtCur.Next(context.TODO()) {
@@ -249,7 +247,7 @@ func checkMonitor(client *mongo.Client, mntrColl *mongo.Collection, monitor chec
 				log.Fatal(err)
 			}
 			wgEvents.Add(1)
-			checkEvent(client, event, monitor, &wgEvents)
+			checkEvent(event, monitor, &wgEvents)
 		}
 		wgEvents.Wait()
 		evtCur.Close(context.TODO())
@@ -270,13 +268,7 @@ func checkMonitor(client *mongo.Client, mntrColl *mongo.Collection, monitor chec
 
 func main() {
 	pbClient = message.Start()
-	mongoHost := "localhost"
-	if mh := os.Getenv("MONGO_HOST"); mh != "" {
-		mongoHost = mh
-	}
-	client := conn.Connect(env.Config.DBName, mongoHost, "27017")
-	defer conn.Close(client)
-	mntrColl := conn.GetCollection(client, env.Config.DBName, "monitors")
+	mntrColl := conn.MCollection()
 	for true {
 		mntrCursor := conn.Find(mntrColl, &bson.M{"controlled": false})
 
@@ -289,7 +281,7 @@ func main() {
 				log.Fatal(err)
 			}
 			wg.Add(1)
-			go checkMonitor(client, mntrColl, monitor, &wg)
+			go checkMonitor(mntrColl, monitor, &wg)
 		}
 		wg.Wait()
 		mntrCursor.Close(context.TODO())

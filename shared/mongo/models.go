@@ -3,14 +3,13 @@ package mongo
 import (
 	"context"
 	"log"
-	"os"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func Connect(DBName, dbHost, dbPort string) *mongo.Client {
+func Connect(dbHost, dbPort string) *mongo.Client {
 	host := "mongodb://" + dbHost + ":" + dbPort
 	// Set client options
 	clientOptions := options.Client().ApplyURI(host)
@@ -81,15 +80,4 @@ func Close(dbClient *mongo.Client) {
 
 func GetCollection(client *mongo.Client, DBName, collectionName string) *mongo.Collection {
 	return client.Database(DBName).Collection(collectionName)
-}
-
-func ConnectCollection(db string, collectionName string) (*mongo.Client, *mongo.Collection) {
-	mongoHost := "localhost"
-	if mh := os.Getenv("MONGO_HOST"); mh != "" {
-		mongoHost = mh
-	}
-	client := Connect(db, mongoHost, "27017")
-	collection := GetCollection(client, db, collectionName)
-
-	return client, collection
 }
