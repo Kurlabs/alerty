@@ -2,7 +2,7 @@ FROM golang:1.13-alpine as builder
 
 ENV GO111MODULE=on
 
-WORKDIR /app
+WORKDIR /alerty
 
 COPY go.mod .
 COPY go.sum .
@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/controller cmd/control
 # Final stage
 FROM golang:1.13-alpine
 
-COPY --from=builder /app/bin /usr/bin
-COPY --from=builder /app/.env /app/.env
+COPY --from=builder /alerty/bin /usr/bin
+COPY --from=builder /alerty/.env /alerty/.env
 
-WORKDIR /app
+WORKDIR /alerty
