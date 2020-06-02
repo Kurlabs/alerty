@@ -9,8 +9,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+var (
+	collection = models.MCollection()
+)
+
 func TestNewMonitor(t *testing.T) {
-	collection := models.MCollection()
 	checkRepo := NewMonitorsRepository(collection)
 
 	website, err := check.New("Alerty", "https://alerty.online", 10, 1)
@@ -42,7 +45,6 @@ func TestNewMonitor(t *testing.T) {
 }
 
 func TestFindAll(t *testing.T) {
-	collection := models.MCollection()
 	checkRepo := NewMonitorsRepository(collection)
 
 	cur, err := checkRepo.Find(&bson.M{})

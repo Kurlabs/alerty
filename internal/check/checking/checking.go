@@ -15,6 +15,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+var (
+	collection = models.MCollection()
+)
+
 func buildAndSend(cur *mongo.Cursor, pbClient *pubsub.Client) error {
 	domNum := 50
 	counter := 0
@@ -51,7 +55,6 @@ func Run(cls string, frequency int) {
 	// Instance pubsub pool connection
 	pbClient := message.Start()
 	// Instace Mongo Collection
-	collection := models.MCollection()
 	log.Println("frequency:", frequency)
 	checkRepo := inmongo.NewMonitorsRepository(collection)
 	cur, err := checkRepo.Find(&bson.M{"_cls": cls,
