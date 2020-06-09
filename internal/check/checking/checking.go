@@ -17,6 +17,7 @@ import (
 
 var (
 	collection = models.MCollection()
+	pbClient   = message.Start()
 )
 
 func buildAndSend(cur *mongo.Cursor, pbClient *pubsub.Client) error {
@@ -52,8 +53,6 @@ func buildAndSend(cur *mongo.Cursor, pbClient *pubsub.Client) error {
 // Run Looks monitors and makes groups of 50 domains
 // Send those domains to check-url cloudfuction via pubsub
 func Run(cls string, frequency int) {
-	// Instance pubsub pool connection
-	pbClient := message.Start()
 	// Instace Mongo Collection
 	log.Println("frequency:", frequency)
 	checkRepo := inmongo.NewMonitorsRepository(collection)
