@@ -71,7 +71,7 @@ func RobotRun(ctx context.Context, m PubSubMessage) error {
 		log.Fatal(err)
 	}
 	log.Printf("BrainURL: %s", m.Attributes.BrainURL)
-	token := os.Getenv("TOKEN")
+	jwtToken := os.Getenv("TOKEN")
 	brainURL := m.Attributes.BrainURL
 
 	// var webs = []Websites{
@@ -148,7 +148,7 @@ func RobotRun(ctx context.Context, m PubSubMessage) error {
 		req, err := http.NewRequest("POST", brainURL, bytes.NewBuffer(result))
 
 		// Set the header in the request.
-		req.Header.Set("TOKEN", token)
+		req.Header.Set("Authorization", "Bearer "+jwtToken)
 
 		// Execute the request.
 		resp, err := http.DefaultClient.Do(req)
