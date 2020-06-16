@@ -4,8 +4,6 @@ import (
 	"strings"
 
 	"github.com/Kurlabs/alerty/internal/check/checking"
-
-	// Internal calls
 	"github.com/Kurlabs/alerty/shared/env"
 )
 
